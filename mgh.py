@@ -11,7 +11,7 @@ import pandas as pd
 def generate_banner(num):
     return Banner(num)    
 class Banner:
-    def __init__(self, num, color = None, prob = None) -> None:
+    def __init__(self, num, color = None, prob = None, reward = 1) -> None:
         if prob is None:
             self.conversion_prob = np.random.random()
         else:
@@ -21,10 +21,11 @@ class Banner:
         else:
             self.color = color
         self.num = num
+        self.reward = reward
 
     def click(self):
         if np.random.random() <= self.conversion_prob:
-            return 1
+            return self.reward
         return 0
 
 class Strategy():
@@ -175,8 +176,8 @@ class Simulation:
         for i in range(iterations):
             for strat in self.strategies.values():
                 strat.spin()
-    def add_banner(self):
-        tmp = Banner(len(self.banners))
+    def add_banner(self, prob = None, reward = 1):
+        tmp = Banner(len(self.banners), prob = prob, reward = reward)
         for strat in self.strategies.values():
             strat.add_banner(tmp)
         self.banners.append(tmp)
@@ -187,10 +188,19 @@ fig, ax = plt.subplots(len(sim.strategies) + 1, 1, figsize=(10,10))
 if 'sim' not in st.session_state:
     st.session_state.sim = Simulation()
 
+if 'maximum' not in st.session_state:
+    st.session_state.maximum = 1
 
+value_banner = int(st.number_input("Введите награду баннеру:", 
+                       min_value=0.0, 
+                       value=100.0, 
+                       format="%.0f",
+                       step=10.0))
+st.metric("Награда за баннер", value_banner)
 if st.button("Добавить баннер"):
-    st.session_state.sim.add_banner()
+    st.session_state.sim.add_banner(reward=value_banner)
     print(len(st.session_state.sim.banners))
+    st.session_state.maximum = max(value_banner, st.session_state.maximum)
     
 value = int(st.number_input("Введите количество нажатий:", 
                        min_value=0.0, 
@@ -198,7 +208,7 @@ value = int(st.number_input("Введите количество нажатий:
                        format="%.0f",
                        step=10.0))
 st.metric("Количество кликов", value)
-x_line = np.linspace(0, 1, 100)    
+x_line = np.linspace(0, st.session_state.maximum, 100)    
 if st.button("Spin"):
     st.session_state.sim.make_simulation(value)
 for ban in st.session_state.sim.banners:
@@ -228,28 +238,8 @@ for j, (key, strat) in enumerate(st.session_state.sim.strategies.items()):
             # unsafe_allow_html=True)
         data.append([key, strat.reward[i], strat.spin_count[i]])
         df = pd.DataFrame(data)
-        # html_table = df.to_html(index=False, classes='my-table')
-        # st.markdown(f"""
-        # <style>
-        # .my-table tr:nth-child(3) {{  /* 3-й ряд */
-        #     background-color: rgb(255, 0, 255) !important;
-        # }}
-        # </style>
-        # {html_table}
-        # """, unsafe_allow_html=True)
-        # data = {
-        #     'Название': key, 'Вероятность': strat.reward[i], 'Прокруток':strat.spin_count[i],
-        # }
-        # s
-        # t.table(data)
-        # st.table(data)#, use_container_width=True)
         
-            # return [''] * len(df.columns)
-
-        # Apply styling and display in Streamlit
-        
-        
-    # st.dataframe(data)
+    
     def highlight_new_row(row): 
         # if row.name == len(df) - 1:  # Last row (newest)     
         if row.name == 0:
