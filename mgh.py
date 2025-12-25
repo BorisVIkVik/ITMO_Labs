@@ -1,9 +1,10 @@
+from os import X_OK
 from tracemalloc import start
 import numpy as np
 from regex import T
 import streamlit as st
 import matplotlib.pyplot as plt
-from scipy.stats import beta
+from scipy.stats import beta, norm
 # from abc import ABC, abstractcalssmethod#, classmethod
 
 def generate_banner(num):
@@ -85,10 +86,12 @@ class UCB(Strategy):
     def __init__(self):
         super().__init__()
         self.n = 0
+        self.M2 = []
 
     def add_banner(self, banner):
         super().add_banner(banner)
         self.calculate_reward(len(self.banners) - 1)
+        self.M2.append(0)
         self.n += 1
     
     def spin(self):
@@ -114,6 +117,7 @@ class EpsilonGreedy(Strategy):
     def __init__(self, eps):
         super().__init__()
         self.eps = eps
+        self.M2 = []
 
     def spin(self):
         if self.eps < np.random.random():
@@ -129,18 +133,21 @@ class EpsilonGreedy(Strategy):
         self.calculate_reward(chosen_arm)
 
 
-        # aproximate_banners_probability = [0] * len(self.banners)
-        # for i, ban in enumerate(self.banners):
-        #     aproximate_banners_probability[i] = ban.prob
-        # return aproximate_banners_probability
-
+    def add_banner(self, banner):
+        super().add_banner(banner)
+        self.M2.append(0)
     
 
     def calculate_reward(self, chosen_arm):
         n = self.spin_count[chosen_arm] + 1
         self.spin_count[chosen_arm] = n
         val = self.reward[chosen_arm]
-        self.reward[chosen_arm] = ((n - 1)/n) * val + (self.banners[chosen_arm].click() / n)
+        tmp_res = self.banners[chosen_arm].click()
+        self.reward[chosen_arm] = ((n - 1)/n) * val + (tmp_res / n)
+        self.M2[chosen_arm] = self.M2[chosen_arm] + (tmp_res - val) * (tmp_res - self.reward[chosen_arm])
+
+    def variance(self, chosen_arm):
+        return self.M2[chosen_arm] / self.spin_count[chosen_arm] if self.spin_count[chosen_arm] > 1 else 0.0
 
 
 
@@ -192,7 +199,15 @@ for j, (key, strat) in enumerate(st.session_state.sim.strategies.items()):
     for i in range(len(strat.reward)):
         # print(strat.reward)
         ax[j + 1].axvline(x=strat.reward[i], color=strat.banners[i].color, linestyle='--', linewidth=2)
-        if key == 'Thompson':
+        if key == 'Greedy':
+            dist = norm(strat.reward[i], np.sqrt(strat.variance(i)))
+            rasp = dist.pdf(x_line)
+            ax[j+1].plot(x_line, rasp, color=strat.banners[i].color, linewidth=2)#, label=f'Beta(α={self.alpha}, β={beta_param})')
+        elif key == 'UCB':
+            dist = norm(strat.reward[i], np.sqrt(strat.variance(i)))
+            rasp = dist.pdf(x_line)
+            ax[j+1].plot(x_line, rasp, color=strat.banners[i].color, linewidth=2)#, label=f'Beta(α={self.alpha}, β={beta_param})')
+        elif key == 'Thompson':
             rasp = beta.pdf(x_line, strat.alpha_bettas[i][0], strat.alpha_bettas[i][1])
             ax[j+1].plot(x_line, rasp, color=strat.banners[i].color, linewidth=2)#, label=f'Beta(α={self.alpha}, β={beta_param})')
         st.markdown(f'<div style="color: rgb({strat.banners[i].color[0] * 255}, {strat.banners[i].color[1] * 255}, {strat.banners[i].color[2] * 255}); font-size: 1.5em;"> {key}: Вероятность: {strat.reward[i]}, Прокруток: {strat.spin_count[i]}</div>', 
