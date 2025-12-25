@@ -6,6 +6,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from scipy.stats import beta, norm
 # from abc import ABC, abstractcalssmethod#, classmethod
+import pandas as pd
 
 def generate_banner(num):
     return Banner(num)    
@@ -205,6 +206,10 @@ for ban in st.session_state.sim.banners:
         st.markdown(f'<div style="color: rgb({ban.color[0] * 255}, {ban.color[1] * 255}, {ban.color[2] * 255}); font-size: 1.5em;"> Реальная вероятность: Вероятность: {ban.conversion_prob}</div>', unsafe_allow_html=True)
 for j, (key, strat) in enumerate(st.session_state.sim.strategies.items()):
     print(strat)
+    data = [
+    ['Название', 'Вероятность', 'Прокруток'],  # Заголовки
+    ]
+    df = pd.DataFrame(data)
     for i in range(len(strat.reward)):
         # print(strat.reward)
         ax[j + 1].axvline(x=strat.reward[i], color=strat.banners[i].color, linestyle='--', linewidth=2)
@@ -219,8 +224,41 @@ for j, (key, strat) in enumerate(st.session_state.sim.strategies.items()):
         elif key == 'Thompson':
             rasp = beta.pdf(x_line, strat.alpha_bettas[i][0], strat.alpha_bettas[i][1])
             ax[j+1].plot(x_line, rasp, color=strat.banners[i].color, linewidth=2)#, label=f'Beta(α={self.alpha}, β={beta_param})')
-        st.markdown(f'<div style="color: rgb({strat.banners[i].color[0] * 255}, {strat.banners[i].color[1] * 255}, {strat.banners[i].color[2] * 255}); font-size: 1.5em;"> {key}: Вероятность: {strat.reward[i]}, Прокруток: {strat.spin_count[i]}</div>', 
-            unsafe_allow_html=True)
+        # st.markdown(f'<div style="color: rgb({strat.banners[i].color[0] * 255}, {strat.banners[i].color[1] * 255}, {strat.banners[i].color[2] * 255}); font-size: 1.5em;"> {key}: Вероятность: {strat.reward[i]}, Прокруток: {strat.spin_count[i]}</div>', 
+            # unsafe_allow_html=True)
+        data.append([key, strat.reward[i], strat.spin_count[i]])
+        df = pd.DataFrame(data)
+        # html_table = df.to_html(index=False, classes='my-table')
+        # st.markdown(f"""
+        # <style>
+        # .my-table tr:nth-child(3) {{  /* 3-й ряд */
+        #     background-color: rgb(255, 0, 255) !important;
+        # }}
+        # </style>
+        # {html_table}
+        # """, unsafe_allow_html=True)
+        # data = {
+        #     'Название': key, 'Вероятность': strat.reward[i], 'Прокруток':strat.spin_count[i],
+        # }
+        # s
+        # t.table(data)
+        # st.table(data)#, use_container_width=True)
+        
+            # return [''] * len(df.columns)
+
+        # Apply styling and display in Streamlit
+        
+        
+    # st.dataframe(data)
+    def highlight_new_row(row): 
+        # if row.name == len(df) - 1:  # Last row (newest)     
+        if row.name == 0:
+            return [''] * len(df.columns)
+        return [f'background-color: rgb({strat.banners[row.name - 1].color[0] * 255}, {strat.banners[row.name - 1].color[1] * 255}, {strat.banners[row.name - 1].color[2] * 255});'] * len(df.columns)
+    styled_df = df.style.apply(highlight_new_row, axis=1)
+    st.dataframe(styled_df, use_container_width=True)
+        
+
 st.pyplot(fig)
 
 
