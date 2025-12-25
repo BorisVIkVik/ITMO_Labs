@@ -90,8 +90,8 @@ class UCB(Strategy):
 
     def add_banner(self, banner):
         super().add_banner(banner)
-        self.calculate_reward(len(self.banners) - 1)
         self.M2.append(0)
+        self.calculate_reward(len(self.banners) - 1)
         self.n += 1
     
     def spin(self):
@@ -109,7 +109,16 @@ class UCB(Strategy):
         
     def calculate_reward(self, chosen_arm):
         self.n += 1
-        super().calculate_reward(chosen_arm)
+        n = self.spin_count[chosen_arm] + 1
+        self.spin_count[chosen_arm] = n
+        val = self.reward[chosen_arm]
+        tmp_res = self.banners[chosen_arm].click()
+        self.reward[chosen_arm] = ((n - 1)/n) * val + (tmp_res / n)
+        self.M2[chosen_arm] = self.M2[chosen_arm] + (tmp_res - val) * (tmp_res - self.reward[chosen_arm])
+    
+    def variance(self, chosen_arm):
+        return self.M2[chosen_arm] / self.spin_count[chosen_arm] if self.spin_count[chosen_arm] > 1 else 0.0
+
 
 
 
