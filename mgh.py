@@ -48,18 +48,36 @@ class Strategy():
         n = self.spin_count[chosen_arm] + 1
         self.spin_count[chosen_arm] = n
         val = self.reward[chosen_arm]
-        self.reward[chosen_arm] = ((n - 1)/n) * val + (self.banners[chosen_arm].click() / n)
-# class ThomsonSampling(Strategy):
-#     def __init__(self) -> None:
-#         # self.eps = eps
-#     def spin(self):
-#         pass
+        curr_reward = self.banners[chosen_arm].click()
+        self.reward[chosen_arm] = ((n - 1)/n) * val + (curr_reward / n)
+        return curr_reward
 
-#     def add_banner(self, banner) -> None:
-#         return super().add_banner(banner)
+class ThomsonSampling(Strategy):
+    def __init__(self) -> None:
+        super().__init__()
+        self.alpha_bettas = []
+        # self.eps = eps
+    def spin(self):
+        mx = -1
+        save_i = 0
+        for i in range(len(self.banners)):
+            tmp_betta = np.random.beta(self.alpha_bettas[i][0], self.alpha_bettas[i][1])
+            if tmp_betta > mx:
+                mx = tmp_betta
+                save_i = i
+        self.calculate_reward(save_i)
+        
+
+    def add_banner(self, banner) -> None:
+        super().add_banner(banner)
+        self.alpha_bettas.append([1, 1])
     
-#     def calculate_reward(self):
-#         pass
+    def calculate_reward(self, chosen_arm):
+        res = super().calculate_reward(chosen_arm)
+        if res == 1:
+            self.alpha_bettas[chosen_arm][0] += 1
+        else:
+            self.alpha_bettas[chosen_arm][1] += 1
 
 
 class UCB(Strategy):
@@ -132,7 +150,8 @@ class Simulation:
         self.strategies = {}
         self.strategies['Greedy'] = EpsilonGreedy(0.9)
         self.strategies['UCB'] = UCB()
-        pass
+        self.strategies['Thompson'] = ThomsonSampling()
+
 
     def make_simulation(self, iterations):
         for i in range(iterations):
@@ -145,7 +164,7 @@ class Simulation:
         self.banners.append(tmp)
 
 sim = Simulation()
-fig, ax = plt.subplots(1, len(sim.strategies) + 1)
+fig, ax = plt.subplots(len(sim.strategies) + 1, 1, figsize=(10,10))
 
 if 'sim' not in st.session_state:
     st.session_state.sim = Simulation()
