@@ -3,6 +3,7 @@ import numpy as np
 from regex import T
 import streamlit as st
 import matplotlib.pyplot as plt
+from scipy.stats import beta
 # from abc import ABC, abstractcalssmethod#, classmethod
 
 def generate_banner(num):
@@ -180,16 +181,20 @@ value = int(st.number_input("Введите количество нажатий:
                        format="%.0f",
                        step=10.0))
 st.metric("Количество кликов", value)
+x_line = np.linspace(0, 1, 100)    
 if st.button("Spin"):
-    
     st.session_state.sim.make_simulation(value)
 for ban in st.session_state.sim.banners:
         ax[0].axvline(x=ban.conversion_prob, color=ban.color, linestyle='--', linewidth=2)
+        st.markdown(f'<div style="color: rgb({ban.color[0] * 255}, {ban.color[1] * 255}, {ban.color[2] * 255}); font-size: 1.5em;"> Реальная вероятность: Вероятность: {ban.conversion_prob}</div>', unsafe_allow_html=True)
 for j, (key, strat) in enumerate(st.session_state.sim.strategies.items()):
     print(strat)
     for i in range(len(strat.reward)):
         # print(strat.reward)
         ax[j + 1].axvline(x=strat.reward[i], color=strat.banners[i].color, linestyle='--', linewidth=2)
+        if key == 'Thompson':
+            rasp = beta.pdf(x_line, strat.alpha_bettas[i][0], strat.alpha_bettas[i][1])
+            ax[j+1].plot(x_line, rasp, color=strat.banners[i].color, linewidth=2)#, label=f'Beta(α={self.alpha}, β={beta_param})')
         st.markdown(f'<div style="color: rgb({strat.banners[i].color[0] * 255}, {strat.banners[i].color[1] * 255}, {strat.banners[i].color[2] * 255}); font-size: 1.5em;"> {key}: Вероятность: {strat.reward[i]}, Прокруток: {strat.spin_count[i]}</div>', 
             unsafe_allow_html=True)
 st.pyplot(fig)
